@@ -18,12 +18,96 @@ You MUST maintain this file to track your work across messages. This is NON-NEGO
 </instructions>
 
 <changelog>
-## 2026-04-01 — Merge Appointments into Leads, remove Appointments nav item
-- Removed "Appointments" from `TopNavBar.tsx` navItems and removed `CalendarCheck` icon import
-- Removed `appointments` view from `src/types/index.ts` View type
-- Removed `Appointments` import and route from `App.tsx`
-- `Leads.tsx` rewritten: added two tabs "Leads" + "Takimet" — Kanban on first tab, full appointments view on second
-- Appointment CRUD fully integrated in Leads view; `Appointments.tsx` file kept but no longer used
+## 2026-04-09 — Add NotificationBellButton to sidebar (navigates to /notifications view)
+- TopNavBar.tsx: added `NotificationBellButton` component with unread badge counter
+- Bell icon imported from @phosphor-icons/react; duplicate `useQuery` import merged
+- Reads invoices/tasks/appointments to compute unread count vs localStorage read IDs
+- Clicking navigates to `notifications` view (Notifications.tsx full page)
+
+## 2026-04-09 — Connect Settings Team tab to StaffMember database
+- Settings.tsx Team tab now reads from useQuery('StaffMember') instead of hardcoded array
+- Added "Shto Anëtar" modal with name, email, color picker → createStaff()
+- Remove button calls removeStaff(id) from DB
+- Empty state shown when no staff exists
+- Erjoni Besimi, Albani (+ Besimi) already in DB and now visible
+
+## 2026-04-09 — Link Tasks to Staff (assignedTo field)
+- Added optional `assignedTo` to Task entity via `backend_database_patch_entities`
+- Tasks.tsx: 3-button toggle in modal (Pa caktuar / Erjoni / Albani) with color coding
+- Task cards show staff badge (violet for Erjoni, emerald for Albani) with first name only
+- Preview modal shows "Caktuar" meta cell with full name badge or "Pa caktuar"
+
+## 2026-04-09 — Link Tasks to Clients (clientId field)
+- Added optional `clientId` to Task entity via `backend_database_patch_entities`
+- Tasks.tsx: fetches clients, adds dropdown in modal ("Klienti - opsionale")
+- Task cards show client name badge (blue, UserCircle icon) when linked
+- Preview modal shows "Klienti" meta cell with client name or "Pa klient"
+
+## 2026-04-09 — Convert top navbar to left vertical sidebar
+- Redesigned `src/components/TopNavBar.tsx` — horizontal top nav → fixed left sidebar (w-56)
+- Sidebar has: logo, search button, vertical nav list, user avatar/logout at bottom
+- App.tsx: main content now has `md:pl-56` offset; footer also offset
+- Mobile: kept hamburger top bar + drawer menu (top-[60px])
+
+## 2026-04-09 — Simplify CV Tracker to "ku ndala" bookmark tool
+## 2026-04-09 — Convert top navbar to left vertical sidebar
+- Redesigned `src/components/TopNavBar.tsx` — horizontal top nav → fixed left sidebar (w-56)
+- Sidebar has: logo, search button, vertical nav list, user avatar/logout at bottom
+- App.tsx: main content now has `md:pl-56` offset; footer also offset
+- Mobile: kept hamburger top bar + drawer menu (top-[60px])
+
+## 2026-04-09 — Simplify CV Tracker to "ku ndala" bookmark tool
+- Redesigned `src/views/CvTracker.tsx` — fokus vetëm te puna e fundit + historiku
+- Big blue card: pozicioni, kompania, data/ora e fundit, shënime + buton "Regjistro Tjetrën"
+- Historiku si listë nën kartë me hover actions (ndrysho/fshi)
+- localStorage key: "cvTrackerSessions" — format i thjeshtësuar
+
+## 2026-04-07 — Multi-user auth: useUser() to read state, useAuth().login() for signup/login
+- App.tsx: uses `useUser()` (never redirects) to check auth state — shows Login if user===null
+- Login.tsx: single "Kyçu / Regjistrohu" button calls `useAuth().login()` → opens Anima modal
+- TopNavBar.tsx: reads name/email from `useUser()`, logout calls `useAuth().logout()`
+- Removed all localStorage auth logic — now fully multi-user via Anima auth
+
+## 2026-04-07 — Replace staff.al logo with My CRM branded logo
+- TopNavBar.tsx: replaced SVG staff.al logo with gradient icon + "My CRM" text logo
+- Icon: blue→cyan gradient square with 4-grid SVG; text: "My" neutral + "CRM" blue-600
+
+## 2026-04-07 — Invoices: monthly chart + expanded stats above table
+- Added 4-card stat row (total, paid, pending, overdue) with icons replacing old 3-card grid
+- Added bar chart (last 6 months EUR) with hover tooltips — pure CSS/SVG, no chart library
+- Added "Sot" daily stats panel beside the chart (count, EUR total, ALL total)
+- All changes in `src/views/Invoices.tsx` only
+
+## 2026-04-02 — Fix logout not working
+- TopNavBar.tsx: `handleLogout` now uses `await logout()` with try/catch
+- App.tsx: check `user === null` (explicit null = logged out) instead of `!user` (avoids blocking on undefined)
+
+## 2026-04-02 — Switch to Anima email auth (replace localStorage auth)
+- Login.tsx: now uses `useAuth().login()` from Anima SDK — single "Kyçu me Email" button
+- App.tsx/TopNavBar.tsx: removed all localStorage auth logic, uses `useAuth()` from SDK
+
+## 2026-04-02 — Fix EUR_TO_ALL constant back to 100 (user confirmed rate is 1 EUR = 100 ALL)
+## 2026-04-02 — Switch to Anima email auth (replace localStorage auth)
+- Login.tsx: now uses `useAuth().login()` from Anima SDK — single "Kyçu me Email" button
+- App.tsx: uses `isAnonymous` + `isPending` from `useAuth()` instead of localStorage flag
+- TopNavBar.tsx: reads `user.name`/`user.email` from SDK; logout calls `useAuth().logout()`
+- Removed all localStorage auth logic (isLoggedIn, userName, userEmail, authChange event)
+
+## 2026-04-02 — Fix EUR_TO_ALL constant back to 100 (user confirmed rate is 1 EUR = 100 ALL)
+- Changed EUR_TO_ALL from 123 → 100 in Invoices.tsx
+- Now 1200 EUR → 120,000 ALL correctly
+
+## 2026-04-02 — Fix currency toggle root cause: amount field moved above currency selector
+- Bug: amount="" at toggle time because amount input was BELOW the currency buttons in DOM order
+- Fix: moved manual amount input ABOVE the currency selector in the modal
+- Removed all __ANIMA_DBG__ console logs
+- EUR_TO_ALL=123; conversion: EUR→ALL ×123, ALL→EUR ÷123
+
+## 2026-04-02 — Fix invoice amount storage (no EUR conversion for ALL invoices)
+- Removed `toEUR()` conversion on save — amounts now stored as-is in native currency
+- Fixes bug: 8000 L was saved as 80 (divided by EUR_TO_ALL=100) then shown as 80 L
+- `openEdit` no longer applies `toDisplay()` multiplier when loading amount into form
+- Lines total display also fixed to use `linesTotal` directly
 
 ## 2026-03-30 — EmailJS credentials injected
 - Hardcoded real credentials in `src/lib/emailService.ts` (fallback values)

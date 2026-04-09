@@ -33,11 +33,6 @@ Eksporto Fatura si PDF
 Shto butonin "Shkarko PDF" për çdo faturë.
 </todo>
 
-<todo id="task-client-link">
-Lidh Detyrat me Klientët
-Shto fushë clientId në Task për t'i lidhur detyrat me klientë specifik.
-</todo>
-
 <todo id="calendar-view">
 Pamje Kalendarike për Takimet
 Shfaq takimet në format kalendarik mujor/javor.

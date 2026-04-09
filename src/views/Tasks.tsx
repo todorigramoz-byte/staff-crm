@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@animaapp/playground-react-sdk";
+import { UserCircle } from "@phosphor-icons/react";
 import { useApp } from "../context/AppContext";
 import {
   DndContext,
@@ -35,6 +36,7 @@ import {
   Eye,
   CalendarBlank,
   ArrowRight,
+  UserCircleGear,
 } from "@phosphor-icons/react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,7 +58,9 @@ const columnConfig: Record<Column, { label: string; headerClass: string; dotClas
 
 const COLUMN_IDS: Column[] = ["todo", "inprogress", "done"];
 
-const emptyForm = { title: "", description: "", dueDate: "", priority: "medium" as Priority, column: "todo" as Column };
+const STAFF_LIST = ["Erjoni Besimi", "Albani"];
+
+const emptyForm = { title: "", description: "", dueDate: "", priority: "medium" as Priority, column: "todo" as Column, clientId: "", assignedTo: "" };
 
 // ──────────────────────────────────────────
 // Task Preview Modal
@@ -64,6 +68,7 @@ const emptyForm = { title: "", description: "", dueDate: "", priority: "medium" 
 function TaskPreviewModal({
   task,
   columnLabel,
+  clientName,
   onClose,
   onEdit,
   onDelete,
@@ -71,11 +76,17 @@ function TaskPreviewModal({
 }: {
   task: any;
   columnLabel: string;
+  clientName?: string;
   onClose: () => void;
   onEdit: (t: any) => void;
   onDelete: (id: string, title: string) => void;
   onToggle: (id: string, current: boolean) => void;
 }) {
+  const staffInitials = (name: string) => name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  const staffColor: Record<string, string> = {
+    "Erjoni Besimi": "bg-violet-100 text-violet-700",
+    "Albani": "bg-emerald-100 text-emerald-700",
+  };
   const pri = priorityConfig[task.priority as Priority];
   return (
     <div
@@ -154,6 +165,33 @@ function TaskPreviewModal({
                 </span>
               ) : (
                 <span className="text-body-sm font-body text-neutral-400 italic">Pa afat</span>
+              )}
+            </div>
+
+            {/* Client */}
+            <div className="bg-neutral-50 rounded-lg p-3">
+              <p className="text-caption text-neutral-400 font-body mb-1 flex items-center gap-1">
+                <UserCircle size={11} weight="fill" /> Klienti
+              </p>
+              {clientName ? (
+                <span className="text-body-sm font-body text-foreground">{clientName}</span>
+              ) : (
+                <span className="text-body-sm font-body text-neutral-400 italic">Pa klient</span>
+              )}
+            </div>
+
+            {/* Assigned To */}
+            <div className="bg-neutral-50 rounded-lg p-3">
+              <p className="text-caption text-neutral-400 font-body mb-1 flex items-center gap-1">
+                <UserCircleGear size={11} weight="fill" /> Caktuar
+              </p>
+              {task.assignedTo ? (
+                <span className={`text-body-sm font-body inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium ${staffColor[task.assignedTo] ?? "bg-neutral-100 text-neutral-600"}`}>
+                  <span className="w-4 h-4 rounded-full bg-white/60 flex items-center justify-center text-[9px] font-bold">{staffInitials(task.assignedTo)}</span>
+                  {task.assignedTo}
+                </span>
+              ) : (
+                <span className="text-body-sm font-body text-neutral-400 italic">Pa caktuar</span>
               )}
             </div>
 
@@ -282,6 +320,18 @@ function SortableTaskCard({
             {task.dueDate && (
               <span className="text-caption text-neutral-400 font-body">
                 {new Date(task.dueDate).toLocaleDateString("sq-AL")}
+              </span>
+            )}
+            {task.clientId && clientMap[task.clientId] && (
+              <span className="text-caption text-blue-600 font-body flex items-center gap-0.5">
+                <UserCircle size={10} weight="fill" />
+                {clientMap[task.clientId]}
+              </span>
+            )}
+            {task.assignedTo && (
+              <span className={`text-caption font-body flex items-center gap-0.5 px-1.5 py-0.5 rounded-full ${task.assignedTo === "Erjoni Besimi" ? "bg-violet-100 text-violet-700" : "bg-emerald-100 text-emerald-700"}`}>
+                <UserCircleGear size={10} weight="fill" />
+                {task.assignedTo.split(" ")[0]}
               </span>
             )}
           </div>
@@ -428,7 +478,16 @@ function DroppableColumn({
 export default function Tasks() {
   const { addToast } = useApp();
   const { data: tasks, isPending } = useQuery("Task", { orderBy: { createdAt: "asc" } });
+  const { data: clients } = useQuery("Client", { orderBy: { name: "asc" } });
   const { create, update, remove, isPending: mutating } = useMutation("Task");
+  const clientMap: Record<string, string> = Object.fromEntries(
+    (clients ?? []).map((c) => [c.id, c.name])
+  );
+
+  const staffColor: Record<string, string> = {
+    "Erjoni Besimi": "bg-violet-100 text-violet-700 border-violet-200",
+    "Albani": "bg-emerald-100 text-emerald-700 border-emerald-200",
+  };
 
   const [columnMap, setColumnMap] = useState<Record<string, Column>>({});
   const [orderedIds, setOrderedIds] = useState<Record<Column, string[]>>({
@@ -600,6 +659,8 @@ export default function Tasks() {
       dueDate: t.dueDate ? new Date(t.dueDate).toISOString().split("T")[0] : "",
       priority: t.priority as Priority,
       column: (columnMap[t.id] ?? (t.isCompleted ? "done" : "todo")) as Column,
+      clientId: t.clientId ?? "",
+      assignedTo: t.assignedTo ?? "",
     });
     setModalOpen(true);
   };
@@ -617,6 +678,8 @@ export default function Tasks() {
         dueDate: form.dueDate ? new Date(form.dueDate) : undefined,
         priority: form.priority,
         isCompleted,
+        clientId: form.clientId || undefined,
+        assignedTo: form.assignedTo || undefined,
       };
       if (editId) {
         await update(editId, payload);
@@ -748,6 +811,7 @@ export default function Tasks() {
         <TaskPreviewModal
           task={previewTask}
           columnLabel={columnConfig[columnMap[previewTask.id] ?? (previewTask.isCompleted ? "done" : "todo")]?.label ?? "—"}
+          clientName={previewTask.clientId ? clientMap[previewTask.clientId] : undefined}
           onClose={() => setPreviewTask(null)}
           onEdit={(t) => { setPreviewTask(null); openEdit(t); }}
           onDelete={(id, title) => { setPreviewTask(null); handleDelete(id, title); }}
@@ -827,6 +891,56 @@ export default function Tasks() {
                     </button>
                   ))}
                 </div>
+              </div>
+              <div>
+                <label className="block text-body-sm font-medium text-foreground mb-1 font-body">
+                  Cakto stafit (opsionale)
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, assignedTo: "" })}
+                    className={`flex-1 py-2 px-3 rounded-md text-body-sm font-body border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      form.assignedTo === ""
+                        ? "bg-neutral-100 text-neutral-600 border-neutral-300"
+                        : "bg-white text-neutral-400 border-border hover:border-neutral-400"
+                    }`}
+                  >
+                    Pa caktuar
+                  </button>
+                  {STAFF_LIST.map((staff) => (
+                    <button
+                      key={staff}
+                      type="button"
+                      onClick={() => setForm({ ...form, assignedTo: form.assignedTo === staff ? "" : staff })}
+                      className={`flex-1 py-2 px-3 rounded-md text-body-sm font-body border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        form.assignedTo === staff
+                          ? staff === "Erjoni Besimi"
+                            ? "bg-violet-600 text-white border-violet-600"
+                            : "bg-emerald-600 text-white border-emerald-600"
+                          : staffColor[staff] + " border"
+                      }`}
+                    >
+                      <UserCircleGear size={14} weight="fill" />
+                      {staff.split(" ")[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-body-sm font-medium text-foreground mb-1 font-body">
+                  Klienti (opsionale)
+                </label>
+                <select
+                  value={form.clientId}
+                  onChange={(e) => setForm({ ...form, clientId: e.target.value })}
+                  className="w-full h-11 px-3 rounded-md border border-border bg-white text-body text-foreground font-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                >
+                  <option value="">— Pa klient —</option>
+                  {(clients ?? []).map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-body-sm font-medium text-foreground mb-1 font-body">

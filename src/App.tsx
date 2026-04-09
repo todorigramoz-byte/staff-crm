@@ -1,39 +1,27 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { useUser } from "@animaapp/playground-react-sdk";
 import { AppProvider, useApp } from "./context/AppContext";
-import { LangProvider } from "./context/LangContext";
+import Login from "./views/Login";
 import TopNavBar from "./components/TopNavBar";
 import CommandPalette from "./components/CommandPalette";
 import ToastContainer from "./components/ToastContainer";
 import Dashboard from "./views/Dashboard";
 import Clients from "./views/Clients";
 import Invoices from "./views/Invoices";
+import Appointments from "./views/Appointments";
 import Tasks from "./views/Tasks";
 import Leads from "./views/Leads";
 import Products from "./views/Products";
 import Emails from "./views/Emails";
-import Bills from "./views/Bills";
 import Settings from "./views/Settings";
-import Login from "./views/Login";
+import Bills from "./views/Bills";
+import CvTracker from "./views/CvTracker";
+import Notifications from "./views/Notifications";
 import "./index.css";
 
 function AppShell() {
   const { currentView } = useApp();
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(
-    () => localStorage.getItem("isLoggedIn") === "true"
-  );
 
-  useEffect(() => {
-    const handleAuthChange = () => {
-      setIsLoggedIn(localStorage.getItem("isLoggedIn") === "true");
-    };
-    window.addEventListener("authChange", handleAuthChange);
-    return () => window.removeEventListener("authChange", handleAuthChange);
-  }, []);
-
-  // Not authenticated → show login page
-  if (!isLoggedIn) {
-    return <Login />;
-  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -47,21 +35,24 @@ function AppShell() {
       <TopNavBar />
       <CommandPalette />
 
-      <main id="main-content" className="pt-[72px] min-h-screen" tabIndex={-1}>
+      <main id="main-content" className="md:pl-56 pt-[60px] md:pt-0 min-h-screen" tabIndex={-1}>
         <div className="max-w-app mx-auto px-4 sm:px-6 py-8">
           {currentView === "dashboard" && <Dashboard />}
           {currentView === "leads" && <Leads />}
           {currentView === "clients" && <Clients />}
           {currentView === "invoices" && <Invoices />}
-          {currentView === "bills" && <Bills />}
+          {currentView === "appointments" && <Appointments />}
           {currentView === "tasks" && <Tasks />}
           {currentView === "products" && <Products />}
           {currentView === "emails" && <Emails />}
+          {currentView === "bills" && <Bills />}
+          {currentView === "cvtracker" && <CvTracker />}
           {currentView === "settings" && <Settings />}
+          {currentView === "notifications" && <Notifications />}
         </div>
       </main>
 
-      <footer className="hidden md:flex items-center justify-between px-6 py-3 border-t border-border bg-white text-caption text-neutral-400 font-body">
+      <footer className="hidden md:flex md:pl-56 items-center justify-between px-6 py-3 border-t border-border bg-white text-caption text-neutral-400 font-body">
         <span>CRM v2.0</span>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-success inline-block" />
@@ -75,11 +66,26 @@ function AppShell() {
 }
 
 export default function App() {
+  // useUser() never redirects — it just reads the current auth state
+  const { user, isPending } = useUser();
+
+  // Still loading auth state
+  if (isPending) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  // Not logged in (null = explicit logged-out state)
+  if (user === null) {
+    return <Login />;
+  }
+
   return (
-    <LangProvider>
-      <AppProvider>
-        <AppShell />
-      </AppProvider>
-    </LangProvider>
+    <AppProvider>
+      <AppShell />
+    </AppProvider>
   );
 }

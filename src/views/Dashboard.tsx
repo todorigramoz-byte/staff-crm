@@ -1,6 +1,5 @@
 import React from "react";
 import { useApp } from "../context/AppContext";
-import { useLang } from "../context/LangContext";
 import { useQuery } from "@animaapp/playground-react-sdk";
 import {
   Users,
@@ -18,7 +17,6 @@ import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
   const { setCurrentView, fmt } = useApp();
-  const { t } = useLang();
 
   const { data: leads, isPending: loadingLeads } = useQuery("Lead");
   const { data: clients, isPending: loadingClients } = useQuery("Client");
@@ -31,6 +29,7 @@ export default function Dashboard() {
 
   const totalClients = clients?.length ?? 0;
   const activeClients = clients?.filter((c) => c.status === "active").length ?? 0;
+  const newClients = clients?.filter((c) => c.status === "lead").length ?? 0;
 
   const pendingInvoices = invoices?.filter((i) => i.status === "pending").length ?? 0;
   const overdueInvoices = invoices?.filter((i) => i.status === "overdue").length ?? 0;
@@ -50,41 +49,41 @@ export default function Dashboard() {
 
   const stats = [
     {
-      label: t("dash_leads_active"),
+      label: "Leads Aktive",
       value: loadingLeads ? "—" : activeLeads,
-      sub: `${totalLeads} ${t("dash_total_leads")}`,
+      sub: `${totalLeads} total leads`,
       icon: <Funnel size={22} weight="regular" className="text-violet-600" />,
       bg: "bg-violet-50",
       view: "leads" as const,
     },
     {
-      label: t("dash_clients_total"),
+      label: "Klientë Total",
       value: loadingClients ? "—" : totalClients,
-      sub: `${activeClients} ${t("dash_active")}`,
+      sub: `${activeClients} aktiv`,
       icon: <Users size={22} weight="regular" className="text-primary" />,
       bg: "bg-primary/8",
       view: "clients" as const,
     },
     {
-      label: t("dash_invoices_pending"),
+      label: "Fatura në Pritje",
       value: loadingInvoices ? "—" : pendingInvoices,
-      sub: overdueInvoices > 0 ? `${overdueInvoices} ${t("dash_overdue")}` : `${fmt(totalRevenue)} ${t("dash_collected")}`,
+      sub: overdueInvoices > 0 ? `${overdueInvoices} të vonuara` : `${fmt(totalRevenue)} arkëtuar`,
       icon: <Receipt size={22} weight="regular" className="text-tertiary" />,
       bg: "bg-tertiary/8",
       view: "invoices" as const,
     },
     {
-      label: t("dash_appts_upcoming"),
+      label: "Takime të Ardhshme",
       value: loadingAppts ? "—" : upcomingAppts,
-      sub: t("dash_appts_planned"),
+      sub: "takime të planifikuara",
       icon: <CalendarCheck size={22} weight="regular" className="text-accent" />,
       bg: "bg-accent/8",
-      view: "leads" as const,
+      view: "appointments" as const,
     },
     {
-      label: t("dash_tasks_open"),
+      label: "Detyra të Hapura",
       value: loadingTasks ? "—" : openTasks,
-      sub: `${highPriorityTasks} ${t("dash_high_priority")}`,
+      sub: `${highPriorityTasks} prioritet i lartë`,
       icon: <CheckSquare size={22} weight="regular" className="text-success" />,
       bg: "bg-success/8",
       view: "tasks" as const,
@@ -105,7 +104,7 @@ export default function Dashboard() {
     .slice(0, 4);
 
   const pendingTaskList = [...(tasks ?? [])]
-    .filter((task) => !task.isCompleted)
+    .filter((t) => !t.isCompleted)
     .sort((a, b) => {
       const p: Record<string, number> = { high: 0, medium: 1, low: 2 };
       return (p[a.priority] ?? 1) - (p[b.priority] ?? 1);
@@ -136,10 +135,10 @@ export default function Dashboard() {
       <div className="relative rounded-xl overflow-hidden mb-8 border border-border">
         <div className="bg-gradient-primary p-8">
           <h1 className="text-h2 font-sans font-medium text-white mb-1">
-            {t("dash_welcome")}
+            Mirëserdhët në CRM-in tuaj
           </h1>
           <p className="text-body-sm text-white/80 font-body">
-            {t("dash_subtitle")}
+            Menaxhoni leads, klientët, faturat, takimet dhe detyrat tuaja.
           </p>
         </div>
       </div>
@@ -170,9 +169,9 @@ export default function Dashboard() {
         <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 flex items-center gap-3">
           <WarningCircle size={20} className="text-red-600 shrink-0" />
           <p className="text-body-sm text-red-700 font-body">
-            {t("dash_overdue_alert")} <strong>{overdueInvoices}</strong> {t("dash_overdue_alert2")}{" "}
+            Keni <strong>{overdueInvoices}</strong> faturë/a të vonuara. {" "}
             <button onClick={() => setCurrentView("invoices")} className="underline cursor-pointer">
-              {t("dash_view_invoices")}
+              Shiko faturat
             </button>
           </p>
         </div>
@@ -183,17 +182,17 @@ export default function Dashboard() {
         {/* Recent Clients */}
         <Card className="bg-white border border-border rounded-lg overflow-hidden">
           <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-            <h2 className="text-h4 font-sans font-medium text-foreground">{t("dash_recent_clients")}</h2>
+            <h2 className="text-h4 font-sans font-medium text-foreground">Klientët e Fundit</h2>
             <Button variant="ghost" size="sm" onClick={() => setCurrentView("clients")}
               className="text-primary bg-transparent hover:bg-primary/5 text-body-sm font-body flex items-center gap-1">
-              {t("view_all")} <ArrowRight size={14} />
+              Të gjithë <ArrowRight size={14} />
             </Button>
           </div>
           <div className="divide-y divide-border">
             {loadingClients ? (
-              <div className="px-5 py-8 text-center text-body-sm text-neutral-400 font-body">{t("loading")}</div>
+              <div className="px-5 py-8 text-center text-body-sm text-neutral-400 font-body">Duke ngarkuar...</div>
             ) : recentClients.length === 0 ? (
-              <div className="px-5 py-8 text-center text-body-sm text-neutral-400 font-body">{t("dash_no_clients")}</div>
+              <div className="px-5 py-8 text-center text-body-sm text-neutral-400 font-body">Nuk ka klientë ende.</div>
             ) : (
               recentClients.map((client) => (
                 <div key={client.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 transition-colors">
@@ -218,24 +217,24 @@ export default function Dashboard() {
         {/* Recent Invoices */}
         <Card className="bg-white border border-border rounded-lg overflow-hidden">
           <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-            <h2 className="text-h4 font-sans font-medium text-foreground">{t("dash_recent_invoices")}</h2>
+            <h2 className="text-h4 font-sans font-medium text-foreground">Faturat e Fundit</h2>
             <Button variant="ghost" size="sm" onClick={() => setCurrentView("invoices")}
               className="text-primary bg-transparent hover:bg-primary/5 text-body-sm font-body flex items-center gap-1">
-              {t("view_all")} <ArrowRight size={14} />
+              Të gjitha <ArrowRight size={14} />
             </Button>
           </div>
           <div className="divide-y divide-border">
             {loadingInvoices ? (
-              <div className="px-5 py-8 text-center text-body-sm text-neutral-400 font-body">{t("loading")}</div>
+              <div className="px-5 py-8 text-center text-body-sm text-neutral-400 font-body">Duke ngarkuar...</div>
             ) : recentInvoices.length === 0 ? (
-              <div className="px-5 py-8 text-center text-body-sm text-neutral-400 font-body">{t("dash_no_invoices")}</div>
+              <div className="px-5 py-8 text-center text-body-sm text-neutral-400 font-body">Nuk ka fatura ende.</div>
             ) : (
               recentInvoices.map((inv) => (
                 <div key={inv.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 transition-colors">
                   <div className="flex-1 min-w-0">
                     <p className="text-body-sm font-medium text-foreground">{inv.invoiceNumber}</p>
                     <p className="text-caption text-neutral-400 font-body">
-                      {t("dash_due")} {new Date(inv.dueDate).toLocaleDateString("sq-AL")}
+                      Skadence: {new Date(inv.dueDate).toLocaleDateString("sq-AL")}
                     </p>
                   </div>
                   <p className="text-body-sm font-medium text-foreground shrink-0">{fmt(inv.amount)}</p>
@@ -249,33 +248,62 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Bottom row — Tasks (full width) */}
-      <div className="grid grid-cols-1 gap-6">
+      {/* Two column grid — Appointments + Tasks */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Upcoming Appointments */}
+        <Card className="bg-white border border-border rounded-lg overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+            <h2 className="text-h4 font-sans font-medium text-foreground">Takimet e Ardhshme</h2>
+            <Button variant="ghost" size="sm" onClick={() => setCurrentView("appointments")}
+              className="text-primary bg-transparent hover:bg-primary/5 text-body-sm font-body flex items-center gap-1">
+              Të gjitha <ArrowRight size={14} />
+            </Button>
+          </div>
+          <div className="divide-y divide-border">
+            {loadingAppts ? (
+              <div className="px-5 py-8 text-center text-body-sm text-neutral-400">Duke ngarkuar...</div>
+            ) : upcomingApptList.length === 0 ? (
+              <div className="px-5 py-8 text-center text-body-sm text-neutral-400 font-body">Asnjë takim i planifikuar.</div>
+            ) : (
+              upcomingApptList.map((appt) => (
+                <div key={appt.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 transition-colors">
+                  <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                    <Clock size={16} className="text-accent" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-body-sm font-medium text-foreground truncate">{appt.title}</p>
+                    <p className="text-caption text-neutral-400 font-body">
+                      {new Date(appt.scheduledAt).toLocaleString("sq-AL", { dateStyle: "short", timeStyle: "short" })}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+
         {/* Pending Tasks */}
         <Card className="bg-white border border-border rounded-lg overflow-hidden">
           <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-            <h2 className="text-h4 font-sans font-medium text-foreground">{t("dash_open_tasks")}</h2>
+            <h2 className="text-h4 font-sans font-medium text-foreground">Detyrat e Hapura</h2>
             <Button variant="ghost" size="sm" onClick={() => setCurrentView("tasks")}
               className="text-primary bg-transparent hover:bg-primary/5 text-body-sm font-body flex items-center gap-1">
-              {t("view_all")} <ArrowRight size={14} />
+              Të gjitha <ArrowRight size={14} />
             </Button>
           </div>
           <div className="divide-y divide-border">
             {loadingTasks ? (
-              <div className="px-5 py-8 text-center text-body-sm text-neutral-400">{t("loading")}</div>
+              <div className="px-5 py-8 text-center text-body-sm text-neutral-400">Duke ngarkuar...</div>
             ) : pendingTaskList.length === 0 ? (
-              <div className="px-5 py-8 text-center text-body-sm text-neutral-400 font-body">{t("dash_no_tasks")}</div>
+              <div className="px-5 py-8 text-center text-body-sm text-neutral-400 font-body">Të gjitha detyrat janë kryer! 🎉</div>
             ) : (
               pendingTaskList.map((task) => (
                 <div key={task.id} className="flex items-center gap-3 px-5 py-3 hover:bg-neutral-50 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
-                    <CheckSquare size={16} className="text-success" />
-                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-body-sm font-medium text-foreground truncate">{task.title}</p>
                     {task.dueDate && (
                       <p className="text-caption text-neutral-400 font-body">
-                        {t("dash_deadline")} {new Date(task.dueDate).toLocaleDateString("sq-AL")}
+                        Afati: {new Date(task.dueDate).toLocaleDateString("sq-AL")}
                       </p>
                     )}
                   </div>

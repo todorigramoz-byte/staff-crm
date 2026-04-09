@@ -13,9 +13,12 @@ export type View =
   | "clients"
   | "invoices"
   | "bills"
+  | "appointments"
   | "tasks"
   | "products"
   | "emails"
-  | "settings";
+  | "cvtracker"
+  | "settings"
+  | "notifications";
 
 export type { Client, Invoice, Appointment, Task } from "@animaapp/playground-react-sdk";

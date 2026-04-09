@@ -15,35 +15,44 @@ import {
   EyeSlash,
   Warning,
   CurrencyEur,
+  X,
+  UserCirclePlus,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { useQuery, useMutation } from "@animaapp/playground-react-sdk";
 
-const teamMembers = [
-  {
-    id: "1",
-    name: "Jane Doe",
-    email: "jane@company.com",
-    role: "Admin",
-    avatar: "JD",
-  },
-  {
-    id: "2",
-    name: "Mark Smith",
-    email: "mark@company.com",
-    role: "Recruiter",
-    avatar: "MS",
-  },
-  {
-    id: "3",
-    name: "Lisa Park",
-    email: "lisa@company.com",
-    role: "Recruiter",
-    avatar: "LP",
-  },
+const COLOR_OPTIONS = [
+  { value: "violet", label: "Violet", bg: "bg-violet-600" },
+  { value: "emerald", label: "Emerald", bg: "bg-emerald-600" },
+  { value: "blue", label: "Blue", bg: "bg-blue-600" },
+  { value: "rose", label: "Rose", bg: "bg-rose-600" },
+  { value: "amber", label: "Amber", bg: "bg-amber-500" },
+  { value: "cyan", label: "Cyan", bg: "bg-cyan-600" },
 ];
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function colorToBg(color?: string) {
+  const map: Record<string, string> = {
+    violet: "bg-violet-600",
+    emerald: "bg-emerald-600",
+    blue: "bg-blue-600",
+    rose: "bg-rose-600",
+    amber: "bg-amber-500",
+    cyan: "bg-cyan-600",
+  };
+  return map[color ?? ""] ?? "bg-neutral-400";
+}
 
 const integrations = [
   {
@@ -74,6 +83,45 @@ const integrations = [
 
 export default function Settings() {
   const { addToast, currency, setCurrency } = useApp();
+
+  // Staff from DB
+  const { data: staffList, isPending: staffPending, error: staffError } = useQuery("StaffMember");
+  const { create: createStaff, remove: removeStaff } = useMutation("StaffMember");
+
+  console.log("__ANIMA_DBG__ staffPending=", staffPending, "staffList=", staffList, "staffError=", staffError);
+
+  // Add staff modal
+  const [showAddStaff, setShowAddStaff] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newColor, setNewColor] = useState("violet");
+  const [staffSaving, setStaffSaving] = useState(false);
+
+  const handleAddStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    setStaffSaving(true);
+    try {
+      await createStaff({ name: newName.trim(), email: newEmail.trim(), color: newColor, isActive: true });
+      addToast(`${newName} u shtua në ekip!`, "success");
+      setNewName(""); setNewEmail(""); setNewColor("violet");
+      setShowAddStaff(false);
+    } catch {
+      addToast("Gabim gjatë shtimit.", "error");
+    } finally {
+      setStaffSaving(false);
+    }
+  };
+
+  const handleRemoveStaff = async (id: string, name: string) => {
+    try {
+      await removeStaff(id);
+      addToast(`${name} u hoq nga ekipi.`, "info");
+    } catch {
+      addToast("Gabim gjatë heqjes.", "error");
+    }
+  };
+
   const [companyName, setCompanyName] = useState("Acme Corp");
   const [companyWebsite, setCompanyWebsite] = useState("https://acme.com");
   const [companyEmail, setCompanyEmail] = useState("hr@acme.com");
@@ -283,47 +331,125 @@ export default function Settings() {
           <Card className="bg-white border border-border rounded-lg overflow-hidden">
             <div className="px-6 py-4 border-b border-border flex items-center justify-between">
               <h2 className="text-h4 font-sans font-medium text-foreground">
-                Team Members
+                Ekipi
               </h2>
               <Button
-                onClick={() => addToast("Invite sent!", "success")}
+                onClick={() => setShowAddStaff(true)}
                 className="bg-gradient-primary text-primary-foreground hover:opacity-90 font-normal flex items-center gap-2 text-body-sm"
               >
                 <Plus size={16} weight="regular" />
-                Invite Member
+                Shto Anëtar
               </Button>
             </div>
-            <div className="divide-y divide-border">
-              {teamMembers.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-center gap-4 px-6 py-4"
-                >
-                  <div className="w-10 h-10 rounded-full gradient-primary-bg flex items-center justify-center shrink-0">
-                    <span className="text-body-sm font-medium text-white">
-                      {member.avatar}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-body-sm font-medium text-foreground">
-                      {member.name}
-                    </p>
-                    <p className="text-caption text-neutral-500 font-body">
-                      {member.email}
-                    </p>
-                  </div>
-                  <span className="text-caption px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-body">
-                    {member.role}
-                  </span>
+
+            {/* Add Staff Modal */}
+            {showAddStaff && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 relative">
                   <button
-                    onClick={() => addToast(`Removed ${member.name}`, "error")}
-                    className="p-1.5 rounded hover:bg-red-50 text-neutral-400 hover:text-error transition-colors cursor-pointer"
-                    aria-label={`Remove ${member.name}`}
+                    onClick={() => setShowAddStaff(false)}
+                    className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 transition-colors"
                   >
-                    <Trash size={16} weight="regular" />
+                    <X size={18} />
                   </button>
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center">
+                      <UserCirclePlus size={20} className="text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-h4 font-sans font-medium text-foreground">Shto Anëtar</h3>
+                      <p className="text-caption text-neutral-500 font-body">Anëtar i ri i ekipit</p>
+                    </div>
+                  </div>
+                  <form onSubmit={handleAddStaff} className="space-y-4">
+                    <div>
+                      <label className="block text-body-sm font-medium text-foreground mb-1 font-body">Emri i plotë *</label>
+                      <input
+                        type="text"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        required
+                        placeholder="p.sh. Erjoni Besimi"
+                        className="w-full h-10 px-3 rounded-lg border border-border bg-neutral-50 text-body-sm font-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-body-sm font-medium text-foreground mb-1 font-body">Email</label>
+                      <input
+                        type="email"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        placeholder="p.sh. erjoni@firma.al"
+                        className="w-full h-10 px-3 rounded-lg border border-border bg-neutral-50 text-body-sm font-body text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-body-sm font-medium text-foreground mb-2 font-body">Ngjyra</label>
+                      <div className="flex gap-2 flex-wrap">
+                        {COLOR_OPTIONS.map((c) => (
+                          <button
+                            key={c.value}
+                            type="button"
+                            onClick={() => setNewColor(c.value)}
+                            className={`w-8 h-8 rounded-full ${c.bg} flex items-center justify-center transition-all ${newColor === c.value ? "ring-2 ring-offset-2 ring-neutral-400 scale-110" : "opacity-70 hover:opacity-100"}`}
+                            title={c.label}
+                          >
+                            {newColor === c.value && <Check size={14} weight="bold" className="text-white" />}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Button type="button" variant="outline" onClick={() => setShowAddStaff(false)} className="flex-1 border-border text-neutral-600 hover:bg-neutral-50 font-normal">
+                        Anulo
+                      </Button>
+                      <Button type="submit" disabled={staffSaving || !newName.trim()} className="flex-1 bg-gradient-primary text-primary-foreground hover:opacity-90 font-normal">
+                        {staffSaving ? "Duke shtuar..." : "Shto"}
+                      </Button>
+                    </div>
+                  </form>
                 </div>
-              ))}
+              </div>
+            )}
+
+            <div className="divide-y divide-border">
+              {staffPending ? (
+                <div className="px-6 py-8 text-center text-neutral-400 text-body-sm font-body">Duke ngarkuar...</div>
+              ) : staffError ? (
+                <div className="px-6 py-8 text-center">
+                  <p className="text-body-sm text-red-500 font-body">Gabim: {staffError.message}</p>
+                </div>
+              ) : !staffList || staffList.length === 0 ? (
+                <div className="px-6 py-8 text-center">
+                  <Users size={32} className="text-neutral-300 mx-auto mb-2" />
+                  <p className="text-body-sm text-neutral-500 font-body">Nuk ka anëtarë akoma.</p>
+                  <p className="text-caption text-neutral-400 font-body mt-1">Kliko "Shto Anëtar" dhe shto anëtarin e parë — të dhënat ruhen per-user.</p>
+                </div>
+              ) : (
+                staffList.map((member) => (
+                  <div key={member.id} className="flex items-center gap-4 px-6 py-4">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${colorToBg(member.color)}`}>
+                      <span className="text-body-sm font-medium text-white">
+                        {getInitials(member.name)}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-body-sm font-medium text-foreground">{member.name}</p>
+                      <p className="text-caption text-neutral-500 font-body">{member.email || "—"}</p>
+                    </div>
+                    <span className={`text-caption px-2.5 py-0.5 rounded-full font-body border ${member.isActive ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-neutral-100 text-neutral-500 border-neutral-200"}`}>
+                      {member.isActive ? "Aktiv" : "Joaktiv"}
+                    </span>
+                    <button
+                      onClick={() => handleRemoveStaff(member.id, member.name)}
+                      className="p-1.5 rounded hover:bg-red-50 text-neutral-400 hover:text-error transition-colors cursor-pointer"
+                      aria-label={`Remove ${member.name}`}
+                    >
+                      <Trash size={16} weight="regular" />
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
             <div className="px-6 py-4 border-t border-border">
               <img
